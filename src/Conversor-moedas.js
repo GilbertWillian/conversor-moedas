@@ -1,66 +1,167 @@
-import React from "react";
+import React, { useState } from "react";
 import "./Conversor-moedas.css";
-import { Jumbotron, Button, Form, Col, Spinner, Alert, Modal } from "react-bootstrap";
+import {
+  Jumbotron,
+  Button,
+  Form,
+  Col,
+  Spinner,
+  Alert,
+  Modal,
+} from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleDoubleRight } from "@fortawesome/free-solid-svg-icons";
+import ListarMoedas from "./Listar-moedas";
+import axios from "axios";
 
 function ConversorMoedas() {
+
+  const API_KEY = `7ec00ad5bcac91a3be94d3d29995e28b`
+  const FIXER_URL =
+    `http://data.fixer.io/api/latest?access_key=${API_KEY}`;
+
+  const [valor, setValor] = useState("1");
+  const [moedaDe, setMoedaDe] = useState("BRL");
+  const [moedaPara, setMoedaPara] = useState("USD");
+  const [exibirSpnner, setExibirSpinner] = useState(false);
+  const [formValidado, setFormValidado] = useState(false);
+  const [exibirModal, setExibirModal] = useState(false);
+  const [resultadoConversao, setResultadoConversao] = useState("");
+  const [exibirMsgErro, setExibirMsgErro] = useState(false);
+
+  function handleValor(event) {
+    setValor(event.target.value.replace(/\D/g, "")); // Raplece usa uma expressão regular para substiruir o que não for número por uma string vazia
+  }
+
+  function handleMoedaDe(event) {
+    setMoedaDe(event.target.value);
+  }
+
+  function handleMoedaPara(event) {
+    setMoedaPara(event.target.value);
+  }
+
+  function handleFecharModal(event) {
+    setValor("1");
+    setMoedaDe("BRL");
+    setMoedaPara("USD");
+    setFormValidado(false);
+    setExibirModal(false);
+  }
+
+  function converter(event) {
+    event.preventDefault();
+    setFormValidado(true);
+
+    if (event.currentTarget.checkValidity() === true) {
+      setExibirSpinner(true);
+      axios.get(FIXER_URL)
+      .then((res) => {
+        const cotacao = obterCotacao(res.data);
+        if (cotacao) {
+          setResultadoConversao(`${valor} ${moedaDe} = ${cotacao} ${moedaPara}`);
+          setExibirModal(true);
+          setExibirSpinner(false);
+          setExibirMsgErro(false);
+        } else {
+          exibirErro();
+
+        }
+      })
+      .catch(err => {
+        exibirErro()
+      });
+    }
+  }
+
+  function obterCotacao(dadosCotacao) {
+    if (!dadosCotacao || dadosCotacao.success !== true) {
+      return false;
+    }
+    const cotacaoDe = dadosCotacao.rates[moedaDe];
+    const cotacaoPara = dadosCotacao.rates[moedaPara];
+    const cotacao = (1 / cotacaoDe * cotacaoPara) * valor;
+
+    return cotacao.toFixed(2);
+  }
+
+  function exibirErro() {
+    setExibirMsgErro(true);
+    setExibirSpinner(false);
+  }
+
   return (
     <div>
       <h1 className="text-center">Conversor de moedas</h1>
-      
-      <Alert variant="danger" show={false}>
+
+      <Alert variant="danger" show={exibirMsgErro}>
         Erro obtendo dados de conversão, tente novamente.
       </Alert>
 
       <Jumbotron>
-        <Form>
+        <Form onSubmit={converter} noValidate validated={formValidado}>
           <Form.Row>
             <Col sm="3">
-              <Form.Control placeholder="0" value={1} required />
+              <Form.Control
+                placeholder="0"
+                value={valor}
+                onChange={handleValor}
+                required
+              />
             </Col>
 
             <Col sm="3">
-              <Form.Control as="select"></Form.Control>
+              <Form.Control
+                as="select"
+                value={moedaDe}
+                onChange={handleMoedaDe}
+              >
+                <ListarMoedas />
+              </Form.Control>
             </Col>
 
-            <Col sm="1" className="text-center" style={{ paddingTop: '5px' }}>
+            <Col sm="1" className="text-center" style={{ paddingTop: "5px" }}>
               <FontAwesomeIcon icon={faAngleDoubleRight} />
             </Col>
 
             <Col sm="3">
-              <Form.Control as="select"></Form.Control>
+              <Form.Control
+                as="select"
+                value={moedaPara}
+                onChange={handleMoedaPara}
+              >
+                <ListarMoedas />
+              </Form.Control>
             </Col>
 
             <Col sm="2">
               <Button variant="success" type="submit">
-                <Spinner animation="border" size="sm" />
-                Converter
+                <spam className={exibirSpnner ? null : "hidden"}>
+                  <Spinner animation="border" size="sm" />
+                </spam>
+
+                <spam className={exibirSpnner ? "hidden" : null}>
+                  Converter
+                </spam>
               </Button>
             </Col>
           </Form.Row>
         </Form>
 
-        <Modal show={false}>
-
+        <Modal show={exibirModal} onHide={handleFecharModal}>
           <Modal.Header closeButton>
             <Modal.Title>Conversão</Modal.Title>
           </Modal.Header>
 
-          <Modal.Body>
-            Resultado da conversão aqui...
-          </Modal.Body>
+          <Modal.Body>{resultadoConversao}</Modal.Body>
 
           <Modal.Footer>
-            <Button variant="success">
+            <Button variant="success" onClick={handleFecharModal}>
               Nova conversão
             </Button>
           </Modal.Footer>
-
         </Modal>
-
       </Jumbotron>
-
     </div>
   );
 }
