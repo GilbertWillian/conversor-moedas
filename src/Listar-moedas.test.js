@@ -9,4 +9,6 @@ describe ('Teste do componente de listagem de moedas', () => {
     ReactDOM.render(<ListarMoedas />, div);
     ReactDOM.unmountComponentAtNode(div);
   });
+
+  
 });
